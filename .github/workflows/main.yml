@@ -3,7 +3,6 @@ on: [push]
 
 env:
   GKE_CLUSTER: ${{ secrets.GKE_PROJECT }}-gke
-  GKE_REGION: "europe-north1"
   PROJECT_ID: ${{ secrets.GKE_PROJECT }}
 
 jobs:
