@@ -4,7 +4,6 @@ variable "project_id" {
 
 variable "region" {
   description = "region"
-  default = "europe-north1"
 }
 
 variable "gke_username" {
