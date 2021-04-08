@@ -44,7 +44,7 @@ jobs:
         repo-alias: ingress-nginx
         chart: ingress-nginx/ingress-nginx
       env:
-        KUBECONFIG_FILE: ${{ secret.KUBE_CONFIG }}
+        KUBECONFIG_FILE: ${{ secrets.KUBE_CONFIG }}
 
   deploy-argocd:
     needs: [create-cluster]
