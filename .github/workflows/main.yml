@@ -3,7 +3,8 @@ on: [push]
 
 env:
   GKE_CLUSTER: ${{ secrets.GKE_PROJECT }}-gke
-  PROJECT_ID: ${{ secrets.GKE_PROJECT }}
+  GKE_ZONE: us-central1-c
+  GKE_PROJECT: ${{ secrets.GKE_PROJECT }}
 
 jobs:
   create-cluster:
@@ -30,16 +31,27 @@ jobs:
     name: deploy argo cd to cluster
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@master
-    - name: create namespace for argocd
-      uses: actions-hub/kubectl@master
-      env:
-        KUBE_CONFIG: ${{ secrets.KUBE_CONFIG }}
+    - name: checkout
+      uses: actions/checkout@v2
+
+    # Setup gcloud CLI
+    - uses: google-github-actions/setup-gcloud@v0.2.0
       with:
-        args: create namespace argocd
-    - name: deploy argocd
-      uses: actions-hub/kubectl@master
-      env:
-        KUBE_CONFIG: ${{ secrets.KUBE_CONFIG }}
+        service_account_key: ${{ secrets.GKE_SA_KEY }}
+        project_id: ${{ secrets.GKE_PROJECT }}
+        
+    # Configure docker to use the gcloud command-line tool as a credential helper
+    - run: |-
+        gcloud --quiet auth configure-docker
+
+    # Get the GKE credentials so we can deploy to the cluster
+    - uses: google-github-actions/get-gke-credentials@v0.2.1
       with:
-        args: apply -n argocd -f https://raw.githubusercontent.com/argoproj/argo-cd/stable/manifests/install.yaml
+        cluster_name: ${{ env.GKE_CLUSTER }}
+        location: ${{ env.GKE_ZONE }}
+        credentials: ${{ secrets.GKE_SA_KEY }}
+
+    - name: create namespace for argocd and deploy argocd
+      run: |-
+        kubectl create namespace argocd
+        kubectl apply -n argocd -f https://raw.githubusercontent.com/argoproj/argo-cd/stable/manifests/install.yaml
