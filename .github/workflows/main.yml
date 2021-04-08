@@ -139,7 +139,7 @@ jobs:
     - name: creat app in argo cd
       run: |-
         DEST_SERVER=$(kubectl config view --minify | grep server | cut -f 2- -d ":" | tr -d " ")
-        argocd app create hipster-shop --repo https://github.com/sspyataev/microservices-demo.git --path release --dest-server DEST_SERVER --dest-namespace microservices-demo
+        argocd app create hipster-shop --repo https://github.com/sspyataev/microservices-demo.git --path release --dest-server $DEST_SERVER --dest-namespace microservices-demo
 
     - name: sync app
       run: |-
