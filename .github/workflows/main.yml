@@ -91,3 +91,55 @@ jobs:
       run: |-
         export INGRESS_IP=$(kubectl get services --namespace ingress-nginx ingress-nginx-controller --output jsonpath='{.status.loadBalancer.ingress[0].ip}')
         envsubst < kubernetes/argocd-ingress.yaml| kubectl apply -f -
+
+  deploy-app:
+    needs: [deploy-argocd]
+    name: deploy hipster shop app
+    runs-on: ubuntu-latest
+      steps:
+      - name: checkout
+        uses: actions/checkout@v2
+    # Setup gcloud CLI
+    - uses: google-github-actions/setup-gcloud@v0.2.0
+      with:
+        service_account_key: ${{ secrets.GKE_SA_KEY }}
+        project_id: ${{ secrets.GKE_PROJECT }}
+    # Configure docker to use the gcloud command-line tool as a credential helper
+    - run: |-
+        gcloud --quiet auth configure-docker
+    # Get the GKE credentials so we can deploy to the cluster
+    - uses: google-github-actions/get-gke-credentials@v0.2.1
+      with:
+        cluster_name: ${{ env.GKE_CLUSTER }}
+        location: ${{ env.GKE_ZONE }}
+        credentials: ${{ secrets.GKE_SA_KEY }}
+
+    - name: creat namespace for app
+      run: |-
+        kubectl create ns microservices-demo
+
+    - name: install argo cd cli
+      run: |-
+        VERSION=$(curl --silent "https://api.github.com/repos/argoproj/argo-cd/releases/latest" | grep '"tag_name"' | sed -E 's/.*"([^"]+)".*/\1/')
+        curl -sSL -o /usr/local/bin/argocd https://github.com/argoproj/argo-cd/releases/download/$VERSION/argocd-linux-amd64
+        chmod +x /usr/local/bin/argocd
+
+    - name: login to argo cd
+      run: |-
+        kubectl -n argocd get secret argocd-initial-admin-secret -o jsonpath="{.data.password}" | base64 -d
+        INGRESS_HOST=$(kubectl get ingress -n argocd -o jsonpath='{.items[0].spec.rules[0].host}')
+        ARGOCD_PASSWORD=$(kubectl -n argocd get secret argocd-initial-admin-secret -o jsonpath="{.data.password}" | base64 -d)
+        argocd login INGRESS_HOST --name admin --password ARGOCD_PASSWORD
+
+    - name: add cluster to argo cd
+      run: |-
+        argocd cluster add ${{ secrets.GKE_CONTEXT }}
+
+    - name: creat app in argo cd
+      run: |-
+        DEST_SERVER=$(kubectl config view --minify | grep server | cut -f 2- -d ":" | tr -d " ")
+        argocd app create hipster-shop --repo https://github.com/sspyataev/microservices-demo.git --path release --dest-server DEST_SERVER --dest-namespace microservices-demo
+
+    - name: sync app
+      run: |-
+        argocd app sync hipster-shop
