@@ -82,6 +82,12 @@ jobs:
         credentials: ${{ secrets.GKE_SA_KEY }}
 
     - name: create namespace for argocd and deploy argocd
+      continue-on-error: true
       run: |-
         kubectl create namespace argocd
         kubectl apply -n argocd -f https://raw.githubusercontent.com/argoproj/argo-cd/stable/manifests/install.yaml
+
+    - name: expose argo cd
+      run: |-
+        export INGRESS_IP=$(kubectl get services --namespace ingress-nginx ingress-nginx-controller --output jsonpath='{.status.loadBalancer.ingress[0].ip}')
+        envsubst < kubernetes/argocd-ingress.yaml| kubectl apply -f -
