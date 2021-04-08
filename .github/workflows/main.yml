@@ -133,7 +133,8 @@ jobs:
 
     - name: add cluster to argo cd
       run: |-
-        argocd cluster add ${{ secrets.GKE_CONTEXT }}
+        CURRENT_CONTEXT=$(kubectl config get-contexts -o name)
+        argocd cluster add $CURRENT_CONTEXT
 
     - name: creat app in argo cd
       run: |-
