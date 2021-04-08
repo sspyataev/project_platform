@@ -32,14 +32,14 @@ jobs:
     steps:
     - uses: actions/checkout@master
     - name: create namespace for argocd
-      uses: steebchen/kubectl@master
+      uses: actions-hub/kubectl@master
       env:
-        KUBE_CONFIG_DATA: ${{ secrets.KUBE_CONFIG_DATA }}
+        KUBE_CONFIG_DATA: ${{ secrets.KUBE_CONFIG }}
       with:
         args: create namespace argocd
     - name: deploy argocd
-      uses: steebchen/kubectl@master
+      uses: actions-hub/kubectl@master
       env:
-        KUBE_CONFIG_DATA: ${{ secrets.KUBE_CONFIG_DATA }}
+        KUBE_CONFIG_DATA: ${{ secrets.KUBE_CONFIG }}
       with:
         args: apply -n argocd -f https://raw.githubusercontent.com/argoproj/argo-cd/stable/manifests/install.yaml
