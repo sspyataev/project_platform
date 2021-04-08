@@ -27,7 +27,27 @@ jobs:
       - name: terraform apply
         run: terraform apply -auto-approve=true
 
+  deploy-ingress:
+    needs: [create-cluster]
+    name: deploy nginx ingress controller in cluster
+    runs-on: ubuntu-latest
+    steps:
+    - name: checkout
+      uses: actions/checkout@v2
+
+    - name: deploy ingress
+      uses: deliverybot/helm@v1
+      with:
+        release: ingress-nginx
+        namespace: kube-system
+        repo: https://kubernetes.github.io/ingress-nginx
+        repo-alias: ingress-nginx
+        chart: ingress-nginx/ingress-nginx
+      env:
+        KUBECONFIG_FILE: {{ secret.KUBE_CONFIG }}
+
   deploy-argocd:
+    needs: [create-cluster]
     name: deploy argo cd to cluster
     runs-on: ubuntu-latest
     steps:
