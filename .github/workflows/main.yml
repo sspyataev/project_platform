@@ -29,22 +29,32 @@ jobs:
 
   deploy-ingress:
     needs: [create-cluster]
-    name: deploy nginx ingress controller in cluster
+    name: deploy ingress to cluster
     runs-on: ubuntu-latest
     steps:
     - name: checkout
       uses: actions/checkout@v2
 
-    - name: deploy ingress
-      uses: deliverybot/helm@v1
+    # Setup gcloud CLI
+    - uses: google-github-actions/setup-gcloud@v0.2.0
       with:
-        release: ingress-nginx
-        namespace: kube-system
-        repo: https://kubernetes.github.io/ingress-nginx
-        repo-alias: ingress-nginx
-        chart: ingress-nginx/ingress-nginx
-      env:
-        KUBECONFIG_FILE: ${{ secrets.KUBE_CONFIG }}
+        service_account_key: ${{ secrets.GKE_SA_KEY }}
+        project_id: ${{ secrets.GKE_PROJECT }}
+        
+    # Configure docker to use the gcloud command-line tool as a credential helper
+    - run: |-
+        gcloud --quiet auth configure-docker
+
+    # Get the GKE credentials so we can deploy to the cluster
+    - uses: google-github-actions/get-gke-credentials@v0.2.1
+      with:
+        cluster_name: ${{ env.GKE_CLUSTER }}
+        location: ${{ env.GKE_ZONE }}
+        credentials: ${{ secrets.GKE_SA_KEY }}
+
+    - name: deploy ingress
+      run: |-
+        kubectl apply -f https://raw.githubusercontent.com/kubernetes/ingress-nginx/controller-v0.45.0/deploy/static/provider/cloud/deploy.yaml
 
   deploy-argocd:
     needs: [create-cluster]
