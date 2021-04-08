@@ -4,7 +4,7 @@ variable "project_id" {
 
 variable "region" {
   description = "region"
-  default = "us-central1-c"
+  default = "us-central1"
 }
 
 variable "gke_username" {
