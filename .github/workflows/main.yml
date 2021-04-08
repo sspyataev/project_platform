@@ -115,6 +115,7 @@ jobs:
         credentials: ${{ secrets.GKE_SA_KEY }}
 
     - name: creat namespace for app
+      continue-on-error: true
       run: |-
         kubectl create ns microservices-demo
 
