@@ -170,6 +170,6 @@ jobs:
       continue-on-error: true
       run: |-
         kubectl create ns monitoring
-        kubectl create -n monitoring -f https://github.com/prometheus-operator/kube-prometheus/tree/main/manifests/setup/
+        kubectl create -n monitoring -f manifests/setup/
         until kubectl get servicemonitors --all-namespaces ; do date; sleep 1; echo ""; done
-        kubectl create -n monitoring -f https://github.com/prometheus-operator/kube-prometheus/tree/main/manifests/
+        kubectl create -n monitoring -f manifests/
