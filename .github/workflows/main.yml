@@ -147,7 +147,7 @@ jobs:
 
   setup-monitoring:
     needs: [deploy-app]
-    name: deploy amd setup prometheus for monitoring k8s-cluster and application
+    name: deploy and setup prometheus for monitoring k8s-cluster and application
     runs-on: ubuntu-latest
     steps:
     - name: checkout
@@ -166,10 +166,42 @@ jobs:
         cluster_name: ${{ env.GKE_CLUSTER }}
         location: ${{ env.GKE_ZONE }}
         credentials: ${{ secrets.GKE_SA_KEY }}
-    - name: creat namespace for monitoring and deploy prometheus
-      continue-on-error: true
+    - name: create namespace for monitoring and deploy prometheus
       run: |-
-        kubectl create ns monitoring
         kubectl create -n monitoring -f manifests/setup/
         until kubectl get servicemonitors --all-namespaces ; do date; sleep 1; echo ""; done
         kubectl create -n monitoring -f manifests/
+
+  setup-logging:
+    needs: [deploy-app]
+    name: deploy and setup ECK
+    runs-on: ubuntu-latest
+    steps:
+    - name: checkout
+      uses: actions/checkout@v2
+    # Setup gcloud CLI
+    - uses: google-github-actions/setup-gcloud@v0.2.0
+      with:
+        service_account_key: ${{ secrets.GKE_SA_KEY }}
+        project_id: ${{ secrets.GKE_PROJECT }}
+    # Configure docker to use the gcloud command-line tool as a credential helper
+    - run: |-
+        gcloud --quiet auth configure-docker
+    # Get the GKE credentials so we can deploy to the cluster
+    - uses: google-github-actions/get-gke-credentials@v0.2.1
+      with:
+        cluster_name: ${{ env.GKE_CLUSTER }}
+        location: ${{ env.GKE_ZONE }}
+        credentials: ${{ secrets.GKE_SA_KEY }}
+    - name: Install custom resource definitions and the operator with its RBAC rules
+      run: |-
+        kubectl apply -f https://download.elastic.co/downloads/eck/1.5.0/all-in-one.yaml
+    - name: Apply a simple Elasticsearch cluster specification, with one Elasticsearch node
+      run: |-
+        kubectl apply -f logging/elasticsearch.yaml
+    - name: Specify a Kibana instance and associate it with your Elasticsearch cluster
+      run: |-
+        kubectl apply -f logging/kibana.yaml
+    - name: deploy Filebeat and collect the logs of all containers running in the k8s cluster
+      run: |-
+        kubectl apply -f logging/filebeat.yaml
